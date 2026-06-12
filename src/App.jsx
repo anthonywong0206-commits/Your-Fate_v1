@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 
-const STORAGE_KEY = 'ai_roleplay_story_save_v1'
+const STORAGE_KEY = 'ai_roleplay_story_save_v2'
 const MAX_ROUNDS = 6
 
 const THEMES = [
-  '末日生存',
-  '校園懸疑',
-  '魔法學院',
-  '偵探查案',
-  '古代宮廷',
-  '社工個案情境',
-  '自訂主題',
+  { name: '末日生存', icon: '☢', tone: '廢墟、資源、倖存者' },
+  { name: '校園懸疑', icon: '✦', tone: '舊校舍、匿名訊息、禁忌校刊' },
+  { name: '魔法學院', icon: '✧', tone: '魔法、禁書、結界崩裂' },
+  { name: '偵探查案', icon: '⌕', tone: '雨夜、密室、半真半假證供' },
+  { name: '古代宮廷', icon: '♛', tone: '權謀、密詔、朝堂暗湧' },
+  { name: '社工個案情境', icon: '◈', tone: '危機評估、信任建立、專業判斷' },
+  { name: '自訂主題', icon: '+', tone: '由你建立全新劇本世界' },
 ]
 
 const initialStats = {
@@ -19,6 +19,14 @@ const initialStats = {
   trust: 0,
   morality: 0,
   risk: 0,
+}
+
+const statMeta = {
+  courage: { label: '勇氣', icon: '⚔' },
+  wisdom: { label: '智慧', icon: '✦' },
+  trust: { label: '信任', icon: '♢' },
+  morality: { label: '道德', icon: '⚖' },
+  risk: { label: '風險', icon: '☽' },
 }
 
 const fallbackIntros = {
@@ -69,77 +77,74 @@ const fallbackIntros = {
 function getFallbackIntro(theme, playerName, customTheme) {
   const selectedTheme = theme === '自訂主題' ? customTheme || '神秘冒險' : theme
   const intro = fallbackIntros[selectedTheme] || {
-    background: `這是一個關於「${selectedTheme}」的互動故事，危機正在悄悄展開。`,
+    background: `霧氣覆蓋了「${selectedTheme}」的世界，熟悉的秩序正在崩解。`,
     role: `${playerName} 是故事中的關鍵角色，必須在壓力下作出選擇。`,
     goal: '理解局勢、作出判斷，並帶領故事走向不同結局。',
     crisis: '每個決定都可能帶來意想不到的後果。',
     rules: '每回合從兩個選項中選擇一個，最終根據選擇產生結局。',
   }
-  return {
-    ...intro,
-    role: intro.role.replace('你', playerName || '你'),
-  }
+  return { ...intro, role: intro.role.replace('你', playerName || '你') }
 }
 
 function fallbackScene({ theme, customTheme, playerName, round, stats }) {
   const selectedTheme = theme === '自訂主題' ? customTheme || '神秘冒險' : theme
   const templates = [
     {
-      scene: `${playerName} 在「${selectedTheme}」的世界中發現第一個關鍵線索。一名陌生人提出合作，但他的說法似乎有漏洞。`,
-      choiceA: { text: '相信對方，交換手上情報', effects: { courage: 0, wisdom: 0, trust: 2, morality: 1, risk: 1 } },
-      choiceB: { text: '保持距離，暗中觀察對方', effects: { courage: 0, wisdom: 2, trust: -1, morality: 0, risk: 0 } },
+      scene: `${playerName} 踏入「${selectedTheme}」的核心地帶。遠方傳來不明鐘聲，一名陌生人交出一張沾有灰燼的地圖，聲稱知道下一步該往哪裡走。`,
+      choiceA: { text: '接受地圖，邀請對方同行', effects: { courage: 0, wisdom: 0, trust: 2, morality: 1, risk: 1 } },
+      choiceB: { text: '收下線索，但保持距離觀察', effects: { courage: 0, wisdom: 2, trust: -1, morality: 0, risk: 0 } },
     },
     {
-      scene: `新的危機出現：時間不足，而隊伍內部開始出現分歧。${playerName} 必須決定如何穩住局面。`,
+      scene: `隊伍內部開始出現分歧。有人主張立即行動，有人認為這是一個陷阱。${playerName} 必須在眾人失控前作出決定。`,
       choiceA: { text: '公開所有資訊，讓大家共同決定', effects: { courage: 1, wisdom: 0, trust: 2, morality: 2, risk: 1 } },
       choiceB: { text: '先隱瞞部分情報，避免引起恐慌', effects: { courage: 0, wisdom: 2, trust: -1, morality: -1, risk: 0 } },
     },
     {
-      scene: `一個高風險機會擺在眼前。成功的話可以大幅推進目標，失敗則可能令形勢急轉直下。`,
+      scene: `一道機會在夜色中浮現：成功的話可接近真相，失敗則可能令所有努力歸零。火光照亮 ${playerName} 的臉，選擇只剩下一瞬間。`,
       choiceA: { text: '立即行動，把握機會', effects: { courage: 2, wisdom: 0, trust: 0, morality: 0, risk: 2 } },
       choiceB: { text: '先收集更多資料再行動', effects: { courage: -1, wisdom: 2, trust: 0, morality: 1, risk: -1 } },
     },
     {
-      scene: `${playerName} 發現一名重要角色正隱藏痛苦的真相。揭開它可能有助任務，但也可能傷害對方。`,
-      choiceA: { text: '溫和追問，嘗試理解對方', effects: { courage: 0, wisdom: 1, trust: 2, morality: 2, risk: 0 } },
+      scene: `${playerName} 發現一名重要角色正隱藏痛苦的真相。揭開它可能有助任務，但也可能傷害對方最後一點信任。`,
+      choiceA: { text: '溫和追問，先理解對方處境', effects: { courage: 0, wisdom: 1, trust: 2, morality: 2, risk: 0 } },
       choiceB: { text: '直接指出疑點，迫對方交代', effects: { courage: 2, wisdom: 1, trust: -2, morality: -1, risk: 1 } },
     },
     {
-      scene: `最終局勢逐漸明朗，但代價也浮現。${playerName} 需要在個人安全與整體利益之間取捨。`,
+      scene: `真相逐漸明朗，但代價也浮現。${playerName} 必須在個人安全與整體利益之間取捨。`,
       choiceA: { text: '冒險保護他人', effects: { courage: 2, wisdom: 0, trust: 2, morality: 2, risk: 2 } },
       choiceB: { text: '選擇保守方案，降低損失', effects: { courage: -1, wisdom: 2, trust: 0, morality: 0, risk: -2 } },
     },
     {
-      scene: `最後一道選擇來臨。過去累積的勇氣、智慧、信任與風險，將決定故事走向。`,
+      scene: `最後一道門打開，過去累積的勇氣、智慧、信任與風險全都在此刻回響。${playerName} 已無法回頭。`,
       choiceA: { text: '相信一路建立的關係，合作解決危機', effects: { courage: 1, wisdom: 1, trust: 2, morality: 1, risk: 1 } },
       choiceB: { text: '獨自承擔責任，快速作出最後決斷', effects: { courage: 2, wisdom: 1, trust: -1, morality: 0, risk: 1 } },
     },
   ]
-  const scene = templates[(round - 1) % templates.length]
-  return { ...scene, round, statsSnapshot: stats }
+  return { ...templates[(round - 1) % templates.length], round, statsSnapshot: stats }
 }
 
 function fallbackEnding({ playerName, theme, customTheme, stats, history }) {
   const selectedTheme = theme === '自訂主題' ? customTheme || '神秘冒險' : theme
   const positiveScore = stats.courage + stats.wisdom + stats.trust + stats.morality - stats.risk
+  const review = history.map((item, index) => `回合 ${index + 1}：${item.choiceText}`)
 
   if (positiveScore >= 8) {
     return {
-      title: '希望之路',
+      title: '希望的曙光',
       summary: `${playerName} 在「${selectedTheme}」的危機中保持清醒與善意，成功把混亂轉化成新的可能。`,
-      fate: '主角不但完成任務，也成為眾人願意信任的核心人物。',
-      review: history.map((item, index) => `第 ${index + 1} 回合：${item.choiceText}`),
+      fate: '主角完成任務，也成為眾人願意信任的核心人物。',
+      review,
       reflection: ['你最重視哪一次選擇？', '如果重新開始，你會否作出不同決定？'],
     }
   }
 
   if (stats.risk >= 6) {
     return {
-      title: '高風險結局',
+      title: '燃燒的代價',
       summary: `${playerName} 多次選擇冒險推進，雖然接近真相，但也令局面變得難以控制。`,
       fate: '主角保住了部分成果，但必須承受選擇帶來的代價。',
-      review: history.map((item, index) => `第 ${index + 1} 回合：${item.choiceText}`),
-      reflection: ['冒險是否值得？', '在壓力下，安全與效率應如何平衡？'],
+      review,
+      reflection: ['冒險是否值得？', '安全與效率應如何平衡？'],
     }
   }
 
@@ -147,18 +152,30 @@ function fallbackEnding({ playerName, theme, customTheme, stats, history }) {
     title: '灰色餘波',
     summary: `${playerName} 完成了部分目標，但仍有未解的遺憾。故事沒有完全勝利，也沒有完全失敗。`,
     fate: '主角帶着經驗離開，明白每個選擇都會改變人與人之間的關係。',
-    review: history.map((item, index) => `第 ${index + 1} 回合：${item.choiceText}`),
+    review,
     reflection: ['這個結局反映了你怎樣的價值取向？', '你認為最困難的抉擇是甚麼？'],
   }
 }
 
-async function callOpenAI(systemPrompt, userPrompt) {
+async function callAI(systemPrompt, userPrompt) {
+  const serverApi = import.meta.env.VITE_AI_ENDPOINT || '/api/generate'
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY
   const model = import.meta.env.VITE_OPENAI_MODEL || 'gpt-4o-mini'
 
-  if (!apiKey) {
-    throw new Error('沒有設定 API Key，使用本地 Demo 內容。')
+  if (serverApi) {
+    const response = await fetch(serverApi, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ systemPrompt, prompt: userPrompt, model }),
+    })
+    if (response.ok) {
+      const data = await response.json()
+      const text = data.text || data.output || data.content || ''
+      return JSON.parse(String(text).replace(/```json|```/g, '').trim())
+    }
   }
+
+  if (!apiKey) throw new Error('沒有設定 API Key，已使用本地 Demo 劇本。')
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -176,14 +193,10 @@ async function callOpenAI(systemPrompt, userPrompt) {
     }),
   })
 
-  if (!response.ok) {
-    throw new Error('AI API 回應失敗')
-  }
-
+  if (!response.ok) throw new Error('AI API 回應失敗，已使用本地 Demo 劇本。')
   const data = await response.json()
   const content = data.choices?.[0]?.message?.content || ''
-  const cleaned = content.replace(/```json|```/g, '').trim()
-  return JSON.parse(cleaned)
+  return JSON.parse(content.replace(/```json|```/g, '').trim())
 }
 
 function App() {
@@ -200,14 +213,12 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [notice, setNotice] = useState('')
 
-  const selectedTheme = useMemo(() => {
-    return theme === '自訂主題' ? customTheme || '自訂冒險' : theme
-  }, [theme, customTheme])
+  const selectedTheme = useMemo(() => (theme === '自訂主題' ? customTheme || '自訂冒險' : theme), [theme, customTheme])
+  const selectedThemeMeta = useMemo(() => THEMES.find((item) => item.name === theme) || THEMES[0], [theme])
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (!saved) return
-
     try {
       const parsed = JSON.parse(saved)
       setPage(parsed.page || 'home')
@@ -226,17 +237,15 @@ function App() {
   }, [])
 
   useEffect(() => {
-    const save = { page, theme, customTheme, playerName, intro, currentScene, ending, round, stats, history }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(save))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ page, theme, customTheme, playerName, intro, currentScene, ending, round, stats, history }))
   }, [page, theme, customTheme, playerName, intro, currentScene, ending, round, stats, history])
 
   async function generateIntro() {
     setLoading(true)
     setNotice('')
-
     try {
-      const result = await callOpenAI(
-        '你是一名繁體中文互動故事遊戲設計師。你必須只輸出 JSON，不要 Markdown。',
+      const result = await callAI(
+        '你是一名繁體中文互動故事遊戲設計師。你必須只輸出 JSON，不要 Markdown。風格要有沉浸感、電影感，但文字要清楚。',
         `請為互動角色扮演故事生成故事簡介。主題：${selectedTheme}。主角名稱：${playerName}。JSON 格式：{"background":"","role":"","goal":"","crisis":"","rules":""}`,
       )
       setIntro(result)
@@ -252,9 +261,8 @@ function App() {
   async function generateScene(nextRound = round, nextStats = stats, nextHistory = history) {
     setLoading(true)
     setNotice('')
-
     try {
-      const result = await callOpenAI(
+      const result = await callAI(
         '你是一名繁體中文互動故事遊戲主持。你必須只輸出 JSON，不要 Markdown。每回合只提供兩個選項。effects 必須包含 courage, wisdom, trust, morality, risk，數值介乎 -2 至 2。',
         `主題：${selectedTheme}\n主角：${playerName}\n目前回合：${nextRound}/${MAX_ROUNDS}\n目前分數：${JSON.stringify(nextStats)}\n過往選擇：${JSON.stringify(nextHistory)}\n請生成下一回合。JSON 格式：{"scene":"","choiceA":{"text":"","effects":{"courage":0,"wisdom":0,"trust":0,"morality":0,"risk":0}},"choiceB":{"text":"","effects":{"courage":0,"wisdom":0,"trust":0,"morality":0,"risk":0}}}`,
       )
@@ -271,9 +279,8 @@ function App() {
   async function generateEnding(finalStats, finalHistory) {
     setLoading(true)
     setNotice('')
-
     try {
-      const result = await callOpenAI(
+      const result = await callAI(
         '你是一名繁體中文互動故事結局設計師。你必須只輸出 JSON，不要 Markdown。',
         `主題：${selectedTheme}\n主角：${playerName}\n最終分數：${JSON.stringify(finalStats)}\n選擇紀錄：${JSON.stringify(finalHistory)}\n請生成結局。JSON 格式：{"title":"","summary":"","fate":"","review":[""],"reflection":[""]}`,
       )
@@ -288,14 +295,8 @@ function App() {
   }
 
   function startStory() {
-    if (!playerName.trim()) {
-      setNotice('請先輸入角色名稱。')
-      return
-    }
-    if (theme === '自訂主題' && !customTheme.trim()) {
-      setNotice('請輸入自訂劇目主題。')
-      return
-    }
+    if (!playerName.trim()) return setNotice('請先輸入角色名稱。')
+    if (theme === '自訂主題' && !customTheme.trim()) return setNotice('請輸入自訂劇目主題。')
     setRound(1)
     setStats(initialStats)
     setHistory([])
@@ -303,37 +304,18 @@ function App() {
     generateIntro()
   }
 
-  function enterStory() {
-    generateScene(1, stats, history)
-  }
-
   function chooseOption(key) {
     const choice = key === 'A' ? currentScene.choiceA : currentScene.choiceB
     const effects = choice.effects || {}
-    const nextStats = {
-      courage: stats.courage + Number(effects.courage || 0),
-      wisdom: stats.wisdom + Number(effects.wisdom || 0),
-      trust: stats.trust + Number(effects.trust || 0),
-      morality: stats.morality + Number(effects.morality || 0),
-      risk: stats.risk + Number(effects.risk || 0),
-    }
-    const nextHistory = [
-      ...history,
-      {
-        round,
-        scene: currentScene.scene,
-        choiceKey: key,
-        choiceText: choice.text,
-        effects,
-      },
-    ]
-
+    const nextStats = Object.fromEntries(
+      Object.keys(initialStats).map((stat) => [stat, stats[stat] + Number(effects[stat] || 0)]),
+    )
+    const nextHistory = [...history, { round, scene: currentScene.scene, choiceKey: key, choiceText: choice.text, effects }]
     setStats(nextStats)
     setHistory(nextHistory)
 
-    if (round >= MAX_ROUNDS) {
-      generateEnding(nextStats, nextHistory)
-    } else {
+    if (round >= MAX_ROUNDS) generateEnding(nextStats, nextHistory)
+    else {
       const nextRound = round + 1
       setRound(nextRound)
       generateScene(nextRound, nextStats, nextHistory)
@@ -356,119 +338,171 @@ function App() {
   }
 
   return (
-    <main className="app-shell">
-      <section className="hero-card">
-        <div className="topline">AI Roleplay Story</div>
-        <h1>AI 角色扮演互動故事</h1>
-        <p className="subtitle">選擇劇目、建立角色，然後用每一次二選一決定改寫故事支線。</p>
+    <main className="world-shell">
+      <div className="mist mist-one" />
+      <div className="mist mist-two" />
+      <nav className="game-nav">
+        <div>
+          <span className="brand-mark">✥</span>
+          <strong>AI Roleplay Story</strong>
+        </div>
+        <div className="nav-badges">
+          <span>分支劇情</span><span>數值系統</span><span>AI 生成</span>
+        </div>
+      </nav>
 
-        {notice && <div className="notice">{notice}</div>}
-        {loading && <div className="loading">AI 正在生成內容，如未設定 API Key 會自動使用 Demo 劇本……</div>}
+      <section className="game-frame">
+        <aside className="left-lore">
+          <p className="eyebrow">沉浸式互動故事</p>
+          <h1>你的故事，<br />由你決定</h1>
+          <p className="lead">每個選擇都會改變命運。你會成為英雄、倖存者、調查者，還是那個改寫結局的人？</p>
+          <div className="chapter-line"><span />第 {page === 'home' ? 0 : round} 章<span /></div>
+        </aside>
 
-        {page === 'home' && (
-          <div className="panel">
-            <label>選擇劇目主題</label>
-            <select value={theme} onChange={(event) => setTheme(event.target.value)}>
-              {THEMES.map((item) => (
-                <option key={item} value={item}>{item}</option>
-              ))}
-            </select>
+        <section className="main-stage">
+          {notice && <div className="notice">{notice}</div>}
+          {loading && <div className="loading"><span className="spinner" />AI 正在編寫下一頁命運……</div>}
 
-            {theme === '自訂主題' && (
-              <>
-                <label>自訂主題</label>
-                <input value={customTheme} onChange={(event) => setCustomTheme(event.target.value)} placeholder="例如：時間旅行、職場危機、奇幻王國" />
-              </>
-            )}
+          {page === 'home' && (
+            <div className="screen home-screen">
+              <div className="screen-heading">
+                <p>1. 首頁 / 選擇劇目</p>
+                <h2>選擇你的劇本世界</h2>
+              </div>
 
-            <label>角色名稱</label>
-            <input value={playerName} onChange={(event) => setPlayerName(event.target.value)} placeholder="輸入你的角色名稱" />
+              <div className="theme-grid">
+                {THEMES.map((item) => (
+                  <button
+                    key={item.name}
+                    className={`theme-card ${theme === item.name ? 'active' : ''}`}
+                    onClick={() => setTheme(item.name)}
+                  >
+                    <span className="theme-icon">{item.icon}</span>
+                    <strong>{item.name}</strong>
+                    <small>{item.tone}</small>
+                  </button>
+                ))}
+              </div>
 
-            <button onClick={startStory} disabled={loading}>開始故事</button>
-          </div>
-        )}
-
-        {page === 'intro' && intro && (
-          <div className="panel story-panel">
-            <h2>{selectedTheme}｜故事簡介</h2>
-            <Info title="故事背景" text={intro.background} />
-            <Info title="主角身份" text={intro.role} />
-            <Info title="任務目標" text={intro.goal} />
-            <Info title="主要危機" text={intro.crisis} />
-            <Info title="遊戲規則" text={intro.rules} />
-            <div className="button-row">
-              <button onClick={enterStory} disabled={loading}>進入故事</button>
-              <button className="secondary" onClick={resetGame}>重新開始</button>
+              <div className="input-scroll">
+                {theme === '自訂主題' && (
+                  <label>
+                    自訂劇目主題
+                    <input value={customTheme} onChange={(event) => setCustomTheme(event.target.value)} placeholder="例如：時間旅行、職場危機、奇幻王國" />
+                  </label>
+                )}
+                <label>
+                  你的名字
+                  <input value={playerName} onChange={(event) => setPlayerName(event.target.value)} placeholder="輸入你的角色名稱" />
+                </label>
+                <button className="primary-btn" onClick={startStory} disabled={loading}>開始故事</button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {page === 'story' && currentScene && (
-          <div className="panel story-panel">
-            <div className="round-chip">第 {round} / {MAX_ROUNDS} 回合</div>
-            <h2>{selectedTheme}</h2>
-            <p className="scene-text">{currentScene.scene}</p>
-            <div className="choices">
-              <button onClick={() => chooseOption('A')} disabled={loading}>A. {currentScene.choiceA?.text}</button>
-              <button onClick={() => chooseOption('B')} disabled={loading}>B. {currentScene.choiceB?.text}</button>
+          {page === 'intro' && intro && (
+            <div className="screen intro-screen">
+              <StoryBook title={`${selectedTheme}｜故事簡介`} items={[
+                ['故事背景', intro.background],
+                ['主角身份', intro.role],
+                ['任務目標', intro.goal],
+                ['主要危機', intro.crisis],
+                ['遊戲規則', intro.rules],
+              ]} />
+              <div className="action-row">
+                <button className="primary-btn" onClick={() => generateScene(1, stats, history)} disabled={loading}>進入故事</button>
+                <button className="ghost-btn" onClick={resetGame}>重新開始</button>
+              </div>
             </div>
-            <Stats stats={stats} />
-          </div>
-        )}
+          )}
 
-        {page === 'ending' && ending && (
-          <div className="panel story-panel">
-            <div className="round-chip">故事結局</div>
-            <h2>{ending.title}</h2>
-            <Info title="故事總結" text={ending.summary} />
-            <Info title="主角命運" text={ending.fate} />
-            <div className="info-block">
-              <h3>關鍵選擇回顧</h3>
-              <ul>
-                {(ending.review || []).map((item, index) => <li key={index}>{item}</li>)}
-              </ul>
+          {page === 'story' && currentScene && (
+            <div className="screen story-screen">
+              <div className="screen-heading compact">
+                <p>3. 故事進行中</p>
+                <h2>{selectedTheme}</h2>
+                <span className="round-pill">回合 {round} / {MAX_ROUNDS}</span>
+              </div>
+              <div className="scene-card">
+                <p>{currentScene.scene}</p>
+              </div>
+              <div className="choice-grid">
+                <button className="choice-card choice-a" onClick={() => chooseOption('A')} disabled={loading}>
+                  <span>A</span><strong>{currentScene.choiceA?.text}</strong>
+                </button>
+                <div className="or-mark">或</div>
+                <button className="choice-card choice-b" onClick={() => chooseOption('B')} disabled={loading}>
+                  <span>B</span><strong>{currentScene.choiceB?.text}</strong>
+                </button>
+              </div>
+              <StatsPanel stats={stats} />
             </div>
-            <div className="info-block">
-              <h3>反思問題</h3>
-              <ul>
-                {(ending.reflection || []).map((item, index) => <li key={index}>{item}</li>)}
-              </ul>
+          )}
+
+          {page === 'ending' && ending && (
+            <div className="screen ending-screen">
+              <div className="ending-hero">
+                <p>4. 結局頁面</p>
+                <h2>{ending.title}</h2>
+                <span>你的故事結束了</span>
+              </div>
+              <div className="ending-grid">
+                <InfoCard title="故事總結" text={ending.summary} />
+                <InfoCard title="主角命運" text={ending.fate} />
+                <div className="info-card wide"><h3>關鍵選擇回顧</h3><ul>{(ending.review || []).map((item, index) => <li key={index}>{item}</li>)}</ul></div>
+                <div className="info-card wide"><h3>反思問題</h3><ul>{(ending.reflection || []).map((item, index) => <li key={index}>{item}</li>)}</ul></div>
+              </div>
+              <StatsPanel stats={stats} />
+              <div className="action-row"><button className="primary-btn" onClick={resetGame}>重新開始</button></div>
             </div>
-            <Stats stats={stats} />
-            <button onClick={resetGame}>重新開始</button>
+          )}
+        </section>
+
+        <aside className="right-panel">
+          <div className="status-card">
+            <small>目前劇目</small>
+            <strong>{selectedTheme}</strong>
+            <p>{selectedThemeMeta.tone}</p>
           </div>
-        )}
+          <StatsPanel stats={stats} compact />
+          <div className="mini-log">
+            <h3>選擇紀錄</h3>
+            {history.length === 0 ? <p>故事尚未開始。</p> : history.slice(-4).map((item) => <p key={item.round}>#{item.round} {item.choiceKey}｜{item.choiceText}</p>)}
+          </div>
+        </aside>
       </section>
     </main>
   )
 }
 
-function Info({ title, text }) {
+function StoryBook({ title, items }) {
   return (
-    <div className="info-block">
-      <h3>{title}</h3>
-      <p>{text}</p>
+    <div className="storybook">
+      <div className="book-tabs">{items.map(([title]) => <span key={title}>{title}</span>)}</div>
+      <div className="paper">
+        <h2>{title}</h2>
+        {items.map(([heading, text]) => <InfoCard key={heading} title={heading} text={text} plain />)}
+      </div>
     </div>
   )
 }
 
-function Stats({ stats }) {
-  const labels = {
-    courage: '勇氣',
-    wisdom: '智慧',
-    trust: '信任',
-    morality: '道德',
-    risk: '風險',
-  }
+function InfoCard({ title, text, plain = false }) {
+  return <div className={plain ? 'paper-section' : 'info-card'}><h3>{title}</h3><p>{text}</p></div>
+}
 
+function StatsPanel({ stats, compact = false }) {
   return (
-    <div className="stats-grid">
-      {Object.entries(stats).map(([key, value]) => (
-        <div className="stat-card" key={key}>
-          <span>{labels[key]}</span>
-          <strong>{value}</strong>
-        </div>
-      ))}
+    <div className={`stats-panel ${compact ? 'compact' : ''}`}>
+      {Object.entries(stats).map(([key, value]) => {
+        const percentage = Math.min(100, Math.max(4, (Number(value) + 8) * 6))
+        return (
+          <div className="stat-row" key={key}>
+            <div className="stat-label"><span>{statMeta[key].icon}</span>{statMeta[key].label}<strong>{value}</strong></div>
+            <div className="stat-bar"><i style={{ width: `${percentage}%` }} /></div>
+          </div>
+        )
+      })}
     </div>
   )
 }

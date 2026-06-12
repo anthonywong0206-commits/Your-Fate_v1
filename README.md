@@ -1,103 +1,71 @@
 # AI 角色扮演互動故事網站
 
-這是一個使用 React + Vite 製作的 AI 互動故事網站。用戶可以選擇劇目主題、輸入角色名稱，然後進入由 AI 或本地 Demo 劇本生成的二選一分支故事。
+沉浸式暗黑故事書風格 React + Vite 網站。首頁選擇劇目及角色名稱，之後進入故事簡介、二選一分支回合、數值變化及結局回顧。
 
-## 功能
+## 主要功能
 
-- 多個劇目主題
-- 自訂角色名稱
-- AI 生成故事簡介
-- AI 生成每回合二選一選項
-- 分支劇情與分數系統
-- 不同結局
-- LocalStorage 暫存進度
-- AI 失敗或沒有 API Key 時自動使用本地 Demo 劇本
-- 手機及電腦友善 UI
+- 多劇目主題：末日生存、校園懸疑、魔法學院、偵探查案、古代宮廷、社工個案情境、自訂主題
+- AI 生成故事簡介、每回合二選一、結局
+- 無 API Key 時自動使用本地 Demo 劇本
+- 數值系統：勇氣、智慧、信任、道德、風險
+- LocalStorage 自動保存進度
+- 手機及電腦自適應介面
+- 支援 Vercel API 代理，避免 API Key 暴露在前端
 
-## 安裝
+## 本地測試
 
 ```bash
 npm install
 npm run dev
 ```
 
-## 建立正式版本
+## Vercel 部署 AI API
 
-```bash
-npm run build
-npm run preview
-```
-
-## 環境變數
-
-請複製 `.env.example` 成 `.env`：
-
-```bash
-cp .env.example .env
-```
-
-然後填入：
+1. 上傳專案到 GitHub
+2. 到 Vercel 匯入 GitHub Repo
+3. 到 Project Settings > Environment Variables 新增：
 
 ```env
-VITE_OPENAI_API_KEY=你的_OpenAI_API_Key
-VITE_OPENAI_MODEL=gpt-4o-mini
+OPENAI_API_KEY=你的 OpenAI API Key
 ```
 
-注意：純前端網站的 `VITE_` 變數會被打包到前端，因此正式公開網站不建議直接把真實 API Key 放在前端。正式版建議改用 Vercel Serverless Function 或自建後端代理 API。
+4. Deploy
 
-## Vercel 部署說明
+前端會呼叫：
 
-1. 把專案上載到 GitHub。
-2. 登入 Vercel。
-3. 選擇 `Add New Project`。
-4. 匯入你的 GitHub repository。
-5. Framework Preset 選擇 `Vite`。
-6. Build Command 使用：
-
-```bash
-npm run build
+```txt
+/api/generate
 ```
 
-7. Output Directory 使用：
+此 API 位於：
 
-```bash
-dist
+```txt
+api/generate.js
 ```
 
-8. 如要使用 AI，在 Vercel 的 Project Settings > Environment Variables 加入：
+API Key 只會在 Vercel Serverless Function 內使用，不會打包到前端。
 
-```env
-VITE_OPENAI_API_KEY=你的_OpenAI_API_Key
-VITE_OPENAI_MODEL=gpt-4o-mini
-```
+## GitHub Pages 部署
 
-9. 按 Deploy。
+GitHub Pages 只支援靜態網站，因此不能安全保存 API Key。部署到 GitHub Pages 時，網站仍可使用本地 Demo 劇本，但不建議在 Pages 上使用真實 API Key。
 
-## GitHub Pages 部署說明
-
-### 方法一：使用 gh-pages
-
-先確認 `package.json` 內有：
-
-```json
-"deploy": "gh-pages -d dist"
-```
-
-然後執行：
+如仍需部署：
 
 ```bash
 npm run build
 npm run deploy
 ```
 
-完成後，到 GitHub repository：
+## 更新介面檔案
 
-Settings > Pages > Branch 選擇 `gh-pages`。
+今次主要更新：
 
-### 方法二：GitHub Actions
+```txt
+src/App.jsx
+src/App.css
+api/generate.js
+.env.example
+README.md
+```
 
-你亦可以自行新增 GitHub Actions，把 `dist` 自動部署到 Pages。
-
-## 重要提醒
-
-如果網站只是 Demo 或內部測試，可以直接使用 `.env` 的 API Key。若網站會公開給其他人使用，請不要把 API Key 放在前端，應改用後端代理方式處理 AI API。
+如你已有舊版專案，可直接覆蓋以上檔案。
